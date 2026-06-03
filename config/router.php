@@ -1,5 +1,6 @@
 <?php
 
+define('BASE_URL', '//' . $_SERVER['HTTP_HOST'] . '/autostation_php');
 function route($url): void
 {
     $url = ltrim($url, "/");

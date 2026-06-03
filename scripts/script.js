@@ -14,7 +14,6 @@ function initConditionalVisibility(
       : targetRef;
 
   if (!select || !target) {
-    console.warn("Элементы для настройки видимости не найдены в DOM.");
     return;
   }
 

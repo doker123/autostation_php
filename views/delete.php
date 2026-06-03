@@ -1,8 +1,4 @@
 <?php
-$ROOT_PATH = __DIR__;
-$parts = explode('/', trim($ROOT_PATH, '/'));
-$pathRoot = '/'.$parts[4].'/';
-
 $parking_id = $id ?? '';
 $errors = [];
 $record = null;
@@ -25,6 +21,5 @@ try {
     $errors[] = 'Ошибка базы данных' . $e->getMessage();
 }
 
-header("Location: ". $pathRoot ."home.php");
+header("Location: ".BASE_URL."/home");
 exit();
-?>

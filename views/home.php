@@ -1,13 +1,5 @@
 <?php
 require_once "config/connectionDb.php";
-
-$ROOT_PATH = __DIR__;
-$parts = explode('/', trim($ROOT_PATH, '/'));
-$pathRoot = '/' . $parts[4] . '/';
-
-ini_set("display_errors", 1);
-ini_set("display_startup_errors", 1);
-error_reporting(E_ALL);
 try {
     $pdo = Database::getInstance();
     $sql = "SELECT
@@ -99,23 +91,23 @@ try {
                         <?php } ?>
                     </div>
                     <div class="action">
-                        <a class="btn btn-view" href="<?= $pathRoot ?>view/<?= htmlspecialchars(
+                        <a class="btn btn-view" href="view/<?= htmlspecialchars(
                             $row["parking_id"] ?? "",
                         ) ?>">Подробнее</a>
-                        <a class="btn btn-edit" href="<?= $pathRoot ?>edit/<?= htmlspecialchars(
+                        <a class="btn btn-edit" href="edit/<?= htmlspecialchars(
                             $row["parking_id"] ?? "",
                         ) ?>">Редактировать</a>
-                        <a class="btn btn-delete" href="<?= $pathRoot ?>delete/<?= htmlspecialchars(
+                        <a class="btn btn-delete" href="delete/<?= htmlspecialchars(
                             $row["parking_id"] ?? "",
                         ) ?>">Удалить</a>
                     </div>
                 </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div>Данные отсутствают</div>
+            <div>Данные отсутствуют</div>
         <?php endif; ?>
         <div class="create-row">
-            <a class="create-row" href="<?= $pathRoot ?>create">Создать запись
+            <a class="create-row" href="create">Создать запись
             </a>
         </div>
     </div>
