@@ -1,0 +1,15 @@
+.container {
+    display: flex;
+    justify-content: center;
+}
+.parking-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius:5px;
+    border: black solid ;
+}
+.info-row {
+    border-bottom: black solid 2px;
+}

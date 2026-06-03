@@ -1,0 +1,146 @@
+.create-form {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 25px;
+    background-color: #ffffff;
+    border: 1px solid #000000;
+}
+
+.create-form form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+
+.create-form h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #000000;
+    border-bottom: 1px dashed #cccccc;
+    padding-bottom: 5px;
+}
+
+.create-form label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333333;
+}
+
+.create-form input[type="text"],
+.create-form input[type="tel"],
+.create-form select {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid #000000;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.create-form input:focus,
+.create-form select:focus {
+    outline: none;
+    border-color: darkblue;
+    box-shadow: 0 0 4px rgba(0, 0, 139, 0.2);
+}
+
+.create-form ::placeholder {
+    color: #aaaaaa;
+}
+
+
+.host-data > div {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.host-car {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+
+.payment {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.input-tariff {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+}
+
+
+.input-spot {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+}
+
+.tariff > .select-wrapper,
+.spot > .select-wrapper {
+    margin-bottom: 0;
+}
+
+
+.error-form {
+    margin: 5px 0;
+}
+.error-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+.error-list li {
+    color: darkred;
+    background-color: #fff0f0;
+    border-left: 4px solid darkred;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    border-radius: 2px;
+}
+
+.wrapper-btn {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.btn-submit {
+    background-color: darkgreen;
+    color: whitesmoke;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 30px;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 5px 0 green;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.btn-submit:hover {
+    background-color: green;
+    box-shadow: none;
+    transform: translateY(5px);
+}
