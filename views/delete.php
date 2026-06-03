@@ -1,7 +1,7 @@
 <?php
 $parking_id = $id ?? '';
 $errors = [];
-$record = null;
+$success = false;
 
 try {
     $pdo = Database::getInstance();
@@ -21,6 +21,12 @@ try {
         $errors[] = 'Запись о парковке не найдена';
     }
 
+    if ($result && $stmt_parking->rowCount() > 0) {
+        $success = true;
+    } else {
+        $errors[] = 'Запись о парковке с ID ' . $parking_id . ' не найдена';
+    }
+
     $pdo->commit();
 }catch (Exception $e){
     if (isset($pdo) && $pdo->inTransaction()) {
@@ -28,11 +34,5 @@ try {
     }
     $errors[] = 'Ошибка базы данных' . $e->getMessage();
 }
-if (!empty($errors)) {
-    $_SESSION['errors'] = $errors;
-} elseif ($success) {
-    $_SESSION['success'] = 'Запись о парковке успешно удалена';
-}
-
 header("Location: ". PROJECT_PATH ."/home");
 exit();

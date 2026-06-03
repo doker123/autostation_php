@@ -45,23 +45,24 @@ try {
             <?php foreach ($records as $row): ?>
                 <div class="row-data">
                     <div class="cell"><?= htmlspecialchars(
-                        $row["full_name"] ?? "",
-                    ) ?></div>
+                            $row["full_name"] ?? "",
+                        ) ?></div>
                     <div class="cell"><?= htmlspecialchars(
-                        $row["phone"] ?? "",
-                    ) ?></div>
+                            $row["phone"] ?? "",
+                        ) ?></div>
                     <div class="cell"><?= number_format(
-                        $row["debt"] ?? 0,
-                        2,
-                        ",",
-                        " ",
-                    ) ?> руб.</div>
+                            $row["debt"] ?? 0,
+                            2,
+                            ",",
+                            " ",
+                        ) ?> руб.
+                    </div>
                     <div class="cell"><?= htmlspecialchars(
-                        $row["car_appearance"] ?? "Не указан",
-                    ) ?></div>
+                            $row["car_appearance"] ?? "Не указан",
+                        ) ?></div>
                     <div class="cell"><?= htmlspecialchars(
-                        $row["spot_number"] ?? "",
-                    ) ?></div>
+                            $row["spot_number"] ?? "",
+                        ) ?></div>
                     <div class="cell">
                         <?php
                         $entryTime = $row["entry_time"] ?? '';
@@ -78,11 +79,12 @@ try {
                         ?>
                     </div>
                     <div class="cell"><?= number_format(
-                        $row["total_price"] ?? 0,
-                        2,
-                        ",",
-                        " ",
-                    ) ?> руб.</div>
+                            $row["total_price"] ?? 0,
+                            2,
+                            ",",
+                            " ",
+                        ) ?> руб.
+                    </div>
                     <div class="cell">
                         <?php if ($row["is_paid"]) { ?>
                             <span class="status-paid">Оплачено</span>
