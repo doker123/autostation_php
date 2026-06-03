@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="header-menu">
-    <a href="home"><h1>Автостоянка</h1></a>
+    <a href="/home"><h1>Автостоянка</h1></a>
 </header>
 <?php
 require_once "config/router.php";
