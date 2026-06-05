@@ -1,7 +1,7 @@
 <?php
 
 $errors = [];
-$success = "";
+$success = false;
 $form = [];
 
 try {
