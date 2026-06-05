@@ -3,7 +3,8 @@ class Database
 {
     private static ?\PDO $instance = null;
     private static array $config = [
-        'host' => 'mysqldb',
+        //'host' => 'mysqldb',
+        'host' => 'localhost',
         'dbname' => 's3r4duex_m1',
         'username' => 's3r4duex',
         'password' => 'oyyqwF02',
