@@ -4,24 +4,25 @@ $errors = [];
 $success = false;
 $host = null;
 
-if ($parking_id){
+if ($parking_id) {
     try {
-
         $pdo = Database::getInstance();
-        $sql = "SELECT u.full_name, u.phone 
-                FROM parking
-                WHERE id = ?";
+        $sql = "SELECT
+                u.full_name,
+                u.phone
+                FROM parking p
+                JOIN cars c ON p.car_id = c.id
+                JOIN users u ON c.user_id = u.id
+                JOIN parking_spots ps ON p.spot_id = ps.id
+                WHERE p.id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$parking_id]);
         $users = $stmt->fetch();
-
-
     } catch (Exception $e) {
-        $errors[] = 'Ошибка базы данных' . $e->getMessage();
+        $errors[] = "Ошибка базы данных" . $e->getMessage();
     }
     print_r($host);
 }
-
 ?>
 <div class="create-form">
     <form method="POST">
@@ -31,7 +32,9 @@ if ($parking_id){
                 <div class="input-fio">
                     <label for="fio">Фио паркующегося</label>
                     <input type="text" id="fio" name="fio" placeholder="Петров Петр Петрович"
-                           value="<?= htmlspecialchars($host['full_name'] ?? '') ?>">
+                           value="<?= htmlspecialchars(
+                               $host["full_name"] ?? "",
+                           ) ?>">
                 </div>
                 <div class="input-phone">
                     <label for="phone">Номер паркующегося</label>
@@ -44,4 +47,3 @@ if ($parking_id){
         </div>
     </form>
 </div>
-
