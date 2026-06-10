@@ -25,33 +25,42 @@ error_reporting(E_ALL);
 <main class="main-content">
     <?php
     $parking_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-        if (!$parking_id) {
-            die('Не указан корректный ID записи');
-        }
+    if (!$parking_id) {
+        die('Не указан корректный ID записи');
+    }
     $errors = [];
     $success = false;
-    $host = null;
+    $users = null;
 
-    if ($parking_id) {
-        try {
-            $pdo = Database::getInstance();
-            $sql = "SELECT
+    try {
+        $pdo = Database::getInstance();
+        $sql = "SELECT
                     u.full_name,
                     u.phone
                     FROM parking p
                     JOIN cars c ON p.car_id = c.id
                     JOIN users u ON c.user_id = u.id
-                    JOIN parking_spots ps ON p.spot_id = ps.id
+                    JOIN parking_spots ps ON p.parking_spot_id = ps.id
                     WHERE p.id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$parking_id]);
-            $users = $stmt->fetch();
-        } catch (Exception $e) {
-            $errors[] = "Ошибка базы данных" . $e->getMessage();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$parking_id]);
+        $users = $stmt->fetch();
+
+        if (!$users) {
+            $errors[] = 'Запись с указанным ID не найдена';
         }
-        print_r($host);
+
+    } catch (Exception $e) {
+        $errors[] = "Ошибка базы данных" . $e->getMessage();
     }
     ?>
+    <?php if (!empty($errors)): ?>
+        <div class="error-messages">
+            <?php foreach ($errors as $error): ?>
+                <p class="error"><?= htmlspecialchars($error) ?></p>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
     <div class="create-form">
         <form method="POST">
             <div class="host-data">
@@ -61,12 +70,13 @@ error_reporting(E_ALL);
                         <label for="fio">Фио паркующегося</label>
                         <input type="text" id="fio" name="fio" placeholder="Петров Петр Петрович"
                                value="<?= htmlspecialchars(
-                                   $host["full_name"] ?? "",
+                                   $users["full_name"],
                                ) ?>">
                     </div>
                     <div class="input-phone">
                         <label for="phone">Номер паркующегося</label>
-                        <input type="tel" autocomplete="tel" id="phone" name="phone" placeholder="+7999999999">
+                        <input type="tel" autocomplete="tel" id="phone" name="phone" placeholder="+7999999999"
+                        value="<?= htmlspecialchars($users["phone"])?>">
                     </div>
                 </div>
             </div>

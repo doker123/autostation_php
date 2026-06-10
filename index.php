@@ -37,6 +37,7 @@ error_reporting(E_ALL);
                 c.car_appearance AS car_appearance,
                 ps.spot_number AS spot_number,
                 p.entry_time AS entry_time,
+                p.exit_time AS exit_time,
                 COALESCE(p.total_price, 0) AS total_price,
                 p.is_paid AS is_paid,
                 p.id AS parking_id
@@ -93,12 +94,21 @@ error_reporting(E_ALL);
                             if (!empty($entryTime)) {
                                 try {
                                     $dateTime = new DateTime($entryTime);
-                                    echo $dateTime->format("d.m.Y H:i");
+                                    echo "<p>".$dateTime->format("d.m.Y H:i"). "</p>";
                                 } catch (Exception $e) {
                                     echo "Некорректная дата";
                                 }
                             } else {
                                 echo "Дата отсутствует";
+                            }
+                            $exitTime = $row["exit_time"] ?? "";
+                            if (!empty($exitTime)) {
+                                try {
+                                    $dateTime = new DateTime($exitTime);
+                                    echo '<p>'.$dateTime->format("d.m.Y H:i").'</p>' ;
+                                } catch (Exception $e) {
+                                    echo "Дата отсутствует";
+                                }
                             }
                             ?>
                         </div>

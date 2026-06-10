@@ -34,7 +34,7 @@ a {
 .row-data {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
-    padding: 10px 20px;
+    padding: 10px 25px;
     text-align: center;
     border: solid black 1px;
 }

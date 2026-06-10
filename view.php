@@ -45,6 +45,7 @@ error_reporting(E_ALL);
                     c.car_appearance AS car_appearance,
                     ps.spot_number AS spot_number,
                     p.entry_time AS entry_time,
+                    p.exit_time AS exit_time,
                     COALESCE(p.total_price, 0) AS total_price,
                     p.is_paid AS is_paid,
                     p.id AS parking_id
@@ -96,6 +97,10 @@ error_reporting(E_ALL);
                 <div class="info-row">
                     <span class="info-label">Время въезда:</span>
                     <span class="info-value"><?php echo htmlspecialchars($record['entry_time']); ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Время выезда:</span>
+                    <span class="info-value"><?php echo htmlspecialchars($record['exit_time']); ?></span>
                 </div>
     
                 <div class="info-row">
