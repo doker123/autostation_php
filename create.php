@@ -167,11 +167,12 @@ error_reporting(E_ALL);
                     "app" => $form["car_appearance"],
                 ]);
                 $carId = $pdo->lastInsertId();
-                $stmtParking = $pdo->prepare("INSERT INTO parking (car_id, parking_spot_id, entry_time, is_paid, payment_method, total_price)
-                                                    VALUES (:cid, :sid, NOW(), 0,'cash', 0.00)");
+                $stmtParking = $pdo->prepare("INSERT INTO parking (car_id, parking_spot_id, entry_time, is_paid, payment_method, total_price, tariffs_id)
+                                                    VALUES (:cid, :sid, NOW(), 0,'cash', 0.00, :tariffs)");
                 $stmtParking->execute([
                     "cid" => $carId,
                     "sid" => $spotId,
+                    "tariffs" => $tariffId,
                 ]);
                 $parkingId = $pdo->lastInsertId();
                 if (!empty($form["amount"]) && (float) $form["amount"] > 0) {
