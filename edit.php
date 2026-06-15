@@ -47,15 +47,31 @@ error_reporting(E_ALL);
     try {
         $pdo = Database::getInstance();
         $sql = "SELECT
+                id AS tariff_id,
+                CONCAT_WS(', ',tariff_name, description, price_per_hour) AS tariff_description
+                FROM tariffs
+                WHERE is_active = 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $tariffs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $sql = "SELECT
+                id AS parking_id,
+                spot_number AS spot_number
+                FROM parking_spots
+                WHERE is_occupied = 0";
+        $stmt1 = $pdo->prepare($sql);
+        $stmt1->execute();
+        $spots = $stmt1->fetchAll(PDO::FETCH_ASSOC);
+
+        $sql = "SELECT
                     u.full_name as full_name,
                     u.phone as phone,
                     c.car_appearance as car_appearance,
                     c.car_model as car_model,
                     c.car_color as car_color,
                     p.entry_time AS entry_time,
-                    p.exit_time AS exit_time,
-                    t.tariff_name AS tariff_name,
-                    t.price_per_hour AS tariff_price
+                    p.exit_time AS exit_time
                     FROM parking p
                     JOIN cars c ON p.car_id = c.id
                     JOIN users u ON c.user_id = u.id
@@ -132,15 +148,81 @@ error_reporting(E_ALL);
                     <label for="entry_time">Время вьезда</label>
                 <input type="datetime-local" id="entry_time" name="entry_time"
                     value ="<?= htmlspecialchars(
-                            htmlspecialchars($users['entry_time'] ?? '', ENT_QUOTES, 'UTF-8')
+                            $users['entry_time'],
                             )?>">
                 </div>
                 <div>
-                    <label for="exit_time">Время выезда</label>
-                <input type="datetime-local" id="exit_time" name="exit_time"
-                    value ="<?= htmlspecialchars(
-                            $users["exit_time"],
-                            )?>">
+                <label for="entry_time">Время въезда</label>
+                <input type="datetime-local" id="entry_time" name="entry_time" 
+                value="<?= htmlspecialchars(
+                    $users['entry_time']
+                    ) ?>">
+                </div>
+            </div>
+            <div class="tariff">
+                <label for="select_tariff">Выберите тариф стаянки</label>
+                <div class="select-wrapper">
+                    <select id="select_tariff" name="select_tariff">
+                        <option value="default">Выберите тариф</option>
+                        <option value="create_tariff">Добавить свой тариф</option>
+                        <?php foreach ($tariffs as $tariff): ?>
+                            <option value="<?= htmlspecialchars(
+                                $tariff["tariff_id"],
+                            ) ?>">
+                                <?= htmlspecialchars(
+                                    $tariff["tariff_description"],
+                                ) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="input-tariff">
+                    <div class="name-tariff">
+                        <label for="name_tariff">Название тарифа</label>
+                        <input type="text" id="name_tariff" name="name_tariff" placeholder="Дневной">
+                    </div>
+                    <div class="price-tariff">
+                        <label for="price_tariff">Цена тарифа</label>
+                        <input type="text" id="price_tariff" name="price_tariff" placeholder="100">
+                    </div>
+                    <div class="min-price">
+                        <label for="min_price">Минимальная оплата</label>
+                        <input type="text" id="min_price" name="min_price" placeholder="100">
+                    </div>
+                    <div class="description">
+                        <label for="description">Описание</label>
+                        <input type="text" id="description" name="description" placeholder="Ночной - 50руб/ч">
+                    </div>
+                </div>
+            </div>
+            <div class="spot">
+                <label for="spot">Место стоянки</label>
+                <div class="select-wrapper">
+                    <select id="spot" name="spot">
+                        <option value="default">Выберите место стоянки</option>
+                        <option value="create_spot">Добавить новое место стоянки</option>
+                        <?php foreach ($spots as $spot): ?>
+                            <option value="<?= htmlspecialchars(
+                                $spot["parking_id"],
+                            ) ?>">
+                                <?= htmlspecialchars(
+                                    $spot["spot_number"],
+                                ) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="input-spot">
+                    <div>
+                        <label for="spot_number">Номер места</label>
+                        <input type="text" id="spot_number" name="spot_number" placeholder="A1">
+                    </div>
+                    <div>
+                        <label for="type_spot">Тип парковочного места</label>
+                        <select id="type_spot" name="type_spot">
+                            <option value="regular" selected>Доступно</option>
+                            <option value="disabled">Недоступно</option>
+                            <option value="family">Служебный</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="wrapper-btn">
