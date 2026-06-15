@@ -50,6 +50,8 @@ error_reporting(E_ALL);
                     u.full_name as full_name,
                     u.phone as phone,
                     c.car_appearance as car_appearance,
+                    c.car_model as car_model,
+                    c.car_color as car_color,
                     p.entry_time AS entry_time,
                     p.exit_time AS exit_time,
                     t.tariff_name AS tariff_name,
@@ -98,6 +100,47 @@ error_reporting(E_ALL);
                                    $users["phone"],
                                ) ?>">
                     </div>
+                </div>
+            </div>
+            <div class ="cars-data">
+                <h3>Данные о машине</h3>
+                <div class="input-car-model">
+                    <label for="car_model">Модель машины</label>
+                    <input type="text" id="car_model" name="car_model" placeholder="Ford"
+                    value ="<?= htmlspecialchars(
+                            $users["car_model"],
+                            )?>">
+                </div>
+                <div class="input-car-color">
+                    <label for="car_color">Цвет машины</label>
+                    <input type="text" id="car_color" name="car_color" placeholder="Серый"
+                    value ="<?= htmlspecialchars(
+                            $users["car_color"],
+                            )?>">
+                </div>
+                <div class="input-car-appearence">
+                    <label for="car_appearance">Повреждения на машине</label>
+                    <input type="text" id="car_appearance" name="car_appearance" placeholder="царапина слева на кузове с переди"
+                    value ="<?= htmlspecialchars(
+                            $users["car_appearance"],
+                            )?>">
+                </div>
+            </div>
+            <div class = "date-data">
+                <h3>Дата парковки</h3>
+                <div class="">
+                    <label for="entry_time">Время вьезда</label>
+                <input type="datetime-local" id="entry_time" name="entry_time"
+                    value ="<?= htmlspecialchars(
+                            htmlspecialchars($users['entry_time'] ?? '', ENT_QUOTES, 'UTF-8')
+                            )?>">
+                </div>
+                <div>
+                    <label for="exit_time">Время выезда</label>
+                <input type="datetime-local" id="exit_time" name="exit_time"
+                    value ="<?= htmlspecialchars(
+                            $users["exit_time"],
+                            )?>">
                 </div>
             </div>
             <div class="wrapper-btn">

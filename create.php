@@ -83,6 +83,10 @@ error_reporting(E_ALL);
             $errors[] = "Обязательные поля не заполнены это ФИО, телефон, тариф,
             номер машины и характеристики машины и место парковки.";
         }
+        $phonePattern = '/^(?:\+7|8)?[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}$/';
+        if (!preg_match($phonePattern, $form["phone"])) {
+            $errors[] = "Номер телефона не в формате.";
+        }
         if ($form["select_tariff"] === "create_tariff") {
             if (
                 empty($form["name_tariff"]) ||

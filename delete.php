@@ -3,16 +3,12 @@ require_once __DIR__ . "/config/connectionDb.php";
 ini_set("display_errors", 1);
 ini_set("display_startup_errors", 1);
 error_reporting(E_ALL);
-?>
-<main class="main-content">
-<?php
 $parking_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
     if (!$parking_id) {
         die('Не указан корректный ID записи');
     }
 $errors = [];
 $success = false;
-
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 $basePath = rtrim($scriptDir, '/');
 
@@ -59,4 +55,3 @@ try {
 }
 header("Location: " . PROJECT_PATH . "/home");
 exit();
-?>
