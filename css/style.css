@@ -27,13 +27,13 @@ a {
 
 .row-table {
     display: grid;
-    grid-template-columns: repeat(9, 1fr);
+    grid-template-columns: repeat(10, 1fr);
     padding: 10px 20px;
     border: solid black 1px;
 }
 .row-data {
     display: grid;
-    grid-template-columns: repeat(9, 1fr);
+    grid-template-columns: repeat(10, 1fr);
     padding: 10px 25px;
     text-align: center;
     border: solid black 1px;

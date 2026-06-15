@@ -1,4 +1,4 @@
-<?php ob_start();
+<?php
 require_once "config/helpers.php";
 ?>
 <!doctype html>
@@ -40,11 +40,14 @@ error_reporting(E_ALL);
                 p.exit_time AS exit_time,
                 COALESCE(p.total_price, 0) AS total_price,
                 p.is_paid AS is_paid,
-                p.id AS parking_id
+                p.id AS parking_id,
+                t.tariff_name AS tariff_name,
+                t.price_per_hour AS tariff_price
                 FROM parking p
                 JOIN cars c ON p.car_id = c.id
                 JOIN users u ON c.user_id = u.id
                 JOIN parking_spots ps ON p.parking_spot_id = ps.id
+                JOIN tariffs t ON p.tariffs_id = t.id
                 ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
@@ -62,6 +65,7 @@ error_reporting(E_ALL);
                 <div class="cell">Внешний вид машины</div>
                 <div class="cell">Место на стоянке</div>
                 <div class="cell">Время парковки</div>
+                <div class="cell">Тариф</div>
                 <div class="cell">Итоговая цена парковки</div>
                 <div class="cell">Оплачена ли парковка</div>
                 <div class="action cell">Действия с записью</div>
@@ -111,6 +115,15 @@ error_reporting(E_ALL);
                                 }
                             }
                             ?>
+                        </div>
+                        <div class="cell"><?= htmlspecialchars(
+                           $row["tariff_name"] ?? "Не указан")?>
+                          <?= number_format(
+                            $row["tariff_price"] ?? 0,
+                            2,
+                            ",",
+                            " ",
+                          ) ?> руб/в час.
                         </div>
                         <div class="cell"><?= number_format(
                             $row["total_price"] ?? 0,

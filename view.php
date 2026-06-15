@@ -1,4 +1,4 @@
-<?php ob_start();
+<?php
 require_once "config/helpers.php";?>
 <!doctype html>
 <html lang="ru">
