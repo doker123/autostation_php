@@ -130,7 +130,7 @@ error_reporting(E_ALL);
                     $stmtCheckSpot->execute([":num" => $form["spot_number"]]);
                     if ($stmtCheckSpot->fetch()) {
                         throw new RuntimeException(
-                            "Парковочное место с номером {$form[spot_number]} уже существует.",
+                            "Парковочное место с номером {$form['spot_number']} уже существует.",
                         );
                     }
                     $stmtNewSpot = $pdo->prepare("INSERT INTO parking_spots (spot_number, spot_type, is_occupied)
