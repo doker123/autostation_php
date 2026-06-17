@@ -53,6 +53,11 @@ error_reporting(E_ALL);
         $sql = "SELECT
                     u.full_name as full_name,
                     u.phone as phone,
+                    COALESCE(p.total_price, 0) - COALESCE((
+                    SELECT SUM(amount)
+                    FROM payments
+                    WHERE parking_id = p.id
+                ), 0) AS debt,
                     c.car_appearance as car_appearance,
                     c.car_model as car_model,
                     c.car_color as car_color,
@@ -63,10 +68,14 @@ error_reporting(E_ALL);
                     JOIN users u ON c.user_id = u.id
                     JOIN parking_spots ps ON p.parking_spot_id = ps.id
                     JOIN tariffs t ON p.tariffs_id = t.id
-                    WHERE p.id = ?";
+                    WHERE p.id = ?;
+                    ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$parking_id]);
         $users = $stmt->fetch();
+        $stmt1 = $pdo->prepare("SELECT amount, payment_status, transaction_id FROM payments WHERE parking_id = ?;");
+        $stmt1->execute([$parking_id]);
+        $payments = $stmt1->fetch();
 
         if (!$users) {
             $errors[] = "Запись с указанным ID не найдена";
@@ -137,7 +146,7 @@ error_reporting(E_ALL);
 
             if ($form["select_tariff"] === "create_tariff") {
                 $stmtNewTariff = $pdo->prepare(
-                    "INSERT INTO tariffs (tarriff_name, price_per_hour, min_price, description, is_active) VALUES (:name, :price, :min, :desc, 1)",
+                    "INSERT INTO tariffs (tariff_name, price_per_hour, min_price, description, is_active) VALUES (:name, :price, :min, :desc, 1)",
                 );
                 $stmtNewTariff->execute([
                     ":name" => $form["name_tariff"],
@@ -202,13 +211,6 @@ error_reporting(E_ALL);
         }
     }
     ?>
-    <?php if (!empty($errors)): ?>
-        <div class="error-messages">
-            <?php foreach ($errors as $error): ?>
-                <p class="error"><?= htmlspecialchars($error) ?></p>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
     <div class="create-form">
         <form method="POST">
             <div class="host-data">
@@ -324,6 +326,35 @@ error_reporting(E_ALL);
                         </select>
                     </div>
                 </div>
+            </div>
+            <div class="payment">
+                <div class="amount">
+                    <label for="amount">К оплате(руб)</label>
+                    <input type="text" id="amount" name="amount" placeholder="300руб" value="<?=htmlspecialchars($payments['amount'])?>">
+                </div>
+                <div class="payment-status">
+                    <label for="payment_status">Статус оплаты</label>
+                    <div class="select-wrapper">
+                        <select id="payment_status" name="payment_status">
+                            <option value="pending" selected>В ожидании</option>
+                            <option value="completed">Успешно</option>
+                            <option value="failed">Провально</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="transaction-id">
+                    <label for="transaction_id">ID Транзакции</label>
+                    <input type="text" id="transaction_id" name="transaction_id" placeholder="TXN80121" value="<?= htmlspecialchars($payments['transaction_id'])?>">
+                </div>
+            </div>
+            <div class="error-form">
+                <?php if (!empty($errors)): ?>
+                    <ul class="error-list">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?php echo $error; ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
             </div>
             <div class="wrapper-btn">
                 <input class="btn-submit" type="submit" value="Отправить">
