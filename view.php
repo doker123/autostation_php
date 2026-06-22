@@ -100,7 +100,7 @@ error_reporting(E_ALL);
                 </div>
                 <div class="info-row">
                     <span class="info-label">Время выезда:</span>
-                    <span class="info-value"><?php echo htmlspecialchars($record['exit_time']); ?></span>
+                    <span class="info-value"><?php echo htmlspecialchars($record['exit_time'] ?? ''); ?></span>
                 </div>
     
                 <div class="info-row">
