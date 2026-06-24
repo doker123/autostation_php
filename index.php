@@ -26,32 +26,25 @@ error_reporting(E_ALL);
     require_once "config/connectionDb.php";
     try {
         $pdo = Database::getInstance();
-        $sql = "SELECT
-                u.full_name AS full_name,
-                u.phone AS phone,
-                COALESCE(p.total_price, 0) - COALESCE((
-                    SELECT SUM(amount)
-                    FROM payments
-                    WHERE parking_id = p.id
-                ), 0) AS debt,
-                c.car_appearance AS car_appearance,
-                ps.spot_number AS spot_number,
-                p.entry_time AS entry_time,
-                p.exit_time AS exit_time,
+        $records = $pdo->query("
+            SELECT
+                (SELECT full_name FROM users WHERE id = c.user_id) AS full_name,
+                (SELECT phone FROM users WHERE id = c.user_id) AS phone,
+                c.car_appearance,
+                (SELECT spot_number FROM parking_spots WHERE id = p.parking_spot_id) AS spot_number,
+                p.entry_time,
+                p.exit_time,
                 COALESCE(p.total_price, 0) AS total_price,
-                p.is_paid AS is_paid,
+                p.is_paid,
                 p.id AS parking_id,
-                t.tariff_name AS tariff_name,
-                t.price_per_hour AS tariff_price
-                FROM parking p
-                JOIN cars c ON p.car_id = c.id
-                JOIN users u ON c.user_id = u.id
-                JOIN parking_spots ps ON p.parking_spot_id = ps.id
-                JOIN tariffs t ON p.tariffs_id = t.id
-                ";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
-        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                (SELECT tariff_name FROM tariffs WHERE id = p.tariffs_id) AS tariff_name,
+                (SELECT price_per_hour FROM tariffs WHERE id = p.tariffs_id) AS tariff_price,
+                COALESCE(p.total_price, 0) - COALESCE(
+                    (SELECT SUM(amount) FROM payments WHERE parking_id = p.id), 0
+                ) AS debt
+            FROM parking p
+            JOIN cars c ON p.car_id = c.id
+        ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         die("Ошибка базы данных: " . $e->getMessage());
     }
@@ -73,25 +66,11 @@ error_reporting(E_ALL);
             <?php if (!empty($records)): ?>
                 <?php foreach ($records as $row): ?>
                     <div class="row-data">
-                        <div class="cell"><?= htmlspecialchars(
-                            $row["full_name"] ?? "",
-                        ) ?></div>
-                        <div class="cell"><?= htmlspecialchars(
-                            $row["phone"] ?? "",
-                        ) ?></div>
-                        <div class="cell"><?= number_format(
-                            $row["debt"] ?? 0,
-                            2,
-                            ",",
-                            " ",
-                        ) ?> руб.
-                        </div>
-                        <div class="cell"><?= htmlspecialchars(
-                            $row["car_appearance"] ?? "Не указан",
-                        ) ?></div>
-                        <div class="cell"><?= htmlspecialchars(
-                            $row["spot_number"] ?? "",
-                        ) ?></div>
+                        <div class="cell"><?= htmlspecialchars($row["full_name"]) ?></div>
+                        <div class="cell"><?= htmlspecialchars($row["phone"]) ?></div>
+                        <div class="cell"><?= number_format($row["debt"], 2, ",", " ") ?> руб.</div>
+                        <div class="cell"><?= htmlspecialchars($row["car_appearance"] ?? "Не указан") ?></div>
+                        <div class="cell"><?= htmlspecialchars($row["spot_number"]) ?></div>
                         <div class="cell">
                             <?php
                             $entryTime = $row["entry_time"] ?? "";
@@ -109,40 +88,28 @@ error_reporting(E_ALL);
                             if (!empty($exitTime)) {
                                 try {
                                     $dateTime = new DateTime($exitTime);
-                                    echo '<p>'.$dateTime->format("d.m.Y H:i").'</p>' ;
+                                    echo '<p>'.$dateTime->format("d.m.Y H:i").'</p>';
                                 } catch (Exception $e) {
                                     echo "Дата отсутствует";
                                 }
                             }
                             ?>
                         </div>
-                        <div class="cell"><?= htmlspecialchars(
-                           $row["tariff_name"] ?? "Не указан")?>
-                          <?= number_format(
-                            $row["tariff_price"] ?? 0,
-                            2,
-                            ",",
-                            " ",
-                          ) ?> руб/в час.
+                        <div class="cell"><?= htmlspecialchars($row["tariff_name"] ?? "Не указан") ?>
+                            <?= number_format($row["tariff_price"], 2, ",", " ") ?> руб/в час.
                         </div>
-                        <div class="cell"><?= number_format(
-                            $row["total_price"] ?? 0,
-                            2,
-                            ",",
-                            " ",
-                        ) ?> руб.
-                        </div>
+                        <div class="cell"><?= number_format($row["total_price"], 2, ",", " ") ?> руб.</div>
                         <div class="cell">
-                            <?php if ($row["is_paid"]) { ?>
+                            <?php if ($row["is_paid"]): ?>
                                 <span class="status-paid">Оплачено</span>
-                            <?php } else { ?>
+                            <?php else: ?>
                                 <span class="status-unpaid">Не оплачено</span>
-                            <?php } ?>
+                            <?php endif; ?>
                         </div>
                         <div class="action">
                             <a class="btn btn-view" href="<?= url('view.php?id=' . (int)$row['parking_id']) ?>">Подробнее</a>
-                                <a class="btn btn-edit" href="<?= url('edit.php?id=' . (int)$row['parking_id']) ?>">Редактировать</a>
-                                <a class="btn btn-delete" href="<?= url('delete.php?id=' . (int)$row['parking_id']) ?>">Удалить</a>
+                            <a class="btn btn-edit" href="<?= url('edit.php?id=' . (int)$row['parking_id']) ?>">Редактировать</a>
+                            <a class="btn btn-delete" href="<?= url('delete.php?id=' . (int)$row['parking_id']) ?>">Удалить</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -150,8 +117,7 @@ error_reporting(E_ALL);
                 <div>Данные отсутствуют</div>
             <?php endif; ?>
             <div class="create-row">
-                <a class="create-row" href="<?= url("create.php") ?>">Создать запись
-                </a>
+                <a class="create-row" href="<?= url("create.php") ?>">Создать запись</a>
             </div>
         </div>
     </section>

@@ -29,62 +29,50 @@ error_reporting(E_ALL);
     }
     $errors = [];
     $success = false;
-    $form = null;
+    $users = null;
+    $payments = null;
+
     try {
         $pdo = Database::getInstance();
-        $sql = "SELECT
-                id AS tariff_id,
-                CONCAT_WS(', ',tariff_name, description, price_per_hour) AS tariff_description
-                FROM tariffs
-                WHERE is_active = 1";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
-        $tariffs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $sql = "SELECT
-                id AS parking_id,
-                spot_number AS spot_number
-                FROM parking_spots
-                WHERE is_occupied = 0";
-        $stmt1 = $pdo->prepare($sql);
-        $stmt1->execute();
-        $spots = $stmt1->fetchAll(PDO::FETCH_ASSOC);
+        $tariffs = $pdo->query("
+            SELECT id AS tariff_id, CONCAT_WS(', ', tariff_name, description, price_per_hour) AS tariff_description
+            FROM tariffs WHERE is_active = 1
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
-        $sql = "SELECT
-                    u.full_name as full_name,
-                    u.phone as phone,
-                    COALESCE(p.total_price, 0) - COALESCE((
-                    SELECT SUM(amount)
-                    FROM payments
-                    WHERE parking_id = p.id
-                ), 0) AS debt,
-                    c.car_appearance as car_appearance,
-                    c.car_model as car_model,
-                    c.car_color as car_color,
-                    p.entry_time AS entry_time,
-                    p.exit_time AS exit_time
-                    FROM parking p
-                    JOIN cars c ON p.car_id = c.id
-                    JOIN users u ON c.user_id = u.id
-                    JOIN parking_spots ps ON p.parking_spot_id = ps.id
-                    JOIN tariffs t ON p.tariffs_id = t.id
-                    WHERE p.id = ?;
-                    ";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$parking_id]);
-        $users = $stmt->fetch();
-        $stmt1 = $pdo->prepare("SELECT amount, payment_status, transaction_id FROM payments WHERE parking_id = ?;");
-        $stmt1->execute([$parking_id]);
-        $payments = $stmt1->fetch();
+        $spots = $pdo->query("
+            SELECT id AS parking_id, spot_number
+            FROM parking_spots WHERE is_occupied = 0
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                u.full_name, u.phone,
+                c.car_appearance, c.car_model, c.car_color,
+                p.entry_time, p.exit_time, p.id AS parking_id,
+                COALESCE(p.total_price, 0) - COALESCE(
+                    (SELECT SUM(amount) FROM payments WHERE parking_id = p.id), 0
+                ) AS debt
+            FROM parking p
+            JOIN cars c ON p.car_id = c.id
+            JOIN users u ON c.user_id = u.id
+            WHERE p.id = :pid
+        ");
+        $stmt->execute([":pid" => $parking_id]);
+        $users = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("SELECT amount, payment_status, transaction_id FROM payments WHERE parking_id = :pid LIMIT 1");
+        $stmt->execute([":pid" => $parking_id]);
+        $payments = $stmt->fetch(PDO::FETCH_ASSOC) ?: ["amount" => "", "payment_status" => "pending", "transaction_id" => ""];
 
         if (!$users) {
             $errors[] = "Запись с указанным ID не найдена";
         }
-    } catch (Exception $e) {
-        $errors[] = "Ошибка базы данных" . $e->getMessage();
+    } catch (PDOException $e) {
+        $errors[] = "Ошибка базы данных: " . $e->getMessage();
     }
 
-    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && $users) {
         $form["fio"] = trim($_POST["fio"] ?? "");
         $form["phone"] = trim($_POST["phone"] ?? "");
         $form["car_model"] = trim($_POST["car_model"] ?? "");
@@ -100,6 +88,9 @@ error_reporting(E_ALL);
         $form["spot"] = trim($_POST["spot"] ?? "");
         $form["spot_number"] = trim($_POST["spot_number"] ?? "");
         $form["type_spot"] = trim($_POST["type_spot"] ?? "");
+        $form["amount"] = trim($_POST["amount"] ?? "");
+        $form["payment_status"] = trim($_POST["payment_status"] ?? "");
+        $form["transaction_id"] = trim($_POST["transaction_id"] ?? "");
 
         if (
             empty($form["fio"]) ||
@@ -114,100 +105,66 @@ error_reporting(E_ALL);
         ) {
             $errors[] = "Поля должны быть заполнены";
         }
-        try {
-            $pdo = Database::getInstance();
-            $pdo->beginTransaction();
-            $stmtUser = $pdo->prepare("
-            UPDATE users
-            SET full_name = :fio, phone = :phone
-            WHERE id = (
-                SELECT c.user_id
-                FROM parking p
-                JOIN cars c ON p.car_id = c.id
-                WHERE p.id = :pid
-            )");
-            $stmtUser->execute([
-                "fio" => $form["fio"],
-                "phone" => $form["phone"],
-                "pid" => $parking_id,
-            ]);
 
-            $stmtCar = $pdo->prepare("
-                UPDATE cars
-                SET car_model = :model, car_color = :color, car_appearance = :app
-                WHERE id = (SELECT car_id FROM parking WHERE id = :pid)
-            ");
-            $stmtCar->execute([
-                ":model" => $form["car_model"],
-                ":color" => $form["car_color"],
-                ":app" => $form["car_appearance"],
-                ":pid" => $parking_id,
-            ]);
+        if (empty($errors)) {
+            try {
+                $pdo->beginTransaction();
 
-            if ($form["select_tariff"] === "create_tariff") {
-                $stmtNewTariff = $pdo->prepare(
-                    "INSERT INTO tariffs (tariff_name, price_per_hour, min_price, description, is_active) VALUES (:name, :price, :min, :desc, 1)",
-                );
-                $stmtNewTariff->execute([
-                    ":name" => $form["name_tariff"],
-                    ":price" => $form["price_tariff"],
-                    ":min" => $form["min_price"],
-                    ":desc" => $form["description"],
-                ]);
-                $tariffId = $pdo->lastInsertId();
-            } else {
-                $tariffId = $form["select_tariff"];
-            }
+                $stmt = $pdo->prepare("UPDATE users SET full_name = :fio, phone = :phone WHERE id = (SELECT user_id FROM cars WHERE id = (SELECT car_id FROM parking WHERE id = :pid))");
+                $stmt->execute([":fio" => $form["fio"], ":phone" => $form["phone"], ":pid" => $parking_id]);
 
-            if ($form["spot"] === "create_spot") {
-                $stmtNewSpot = $pdo->prepare("
-                    INSERT INTO parking_spots (spot_number, spot_type, is_occupied)
-                    VALUES (:num, :type, 1)
-                ");
-                $stmtNewSpot->execute([
-                    ":num" => $form["spot_number"],
-                    ":type" => $form["type_spot"],
-                ]);
-                $spotId = $pdo->lastInsertId();
-            } elseif (!empty($form["spot"]) && $form["spot"] !== "default") {
-                $spotId = (int) $form["spot"];
+                $stmt = $pdo->prepare("UPDATE cars SET car_model = :model, car_color = :color, car_appearance = :app WHERE id = (SELECT car_id FROM parking WHERE id = :pid)");
+                $stmt->execute([":model" => $form["car_model"], ":color" => $form["car_color"], ":app" => $form["car_appearance"], ":pid" => $parking_id]);
 
-                $checkStmt = $pdo->prepare(
-                    "SELECT id FROM parking_spots WHERE id = ?",
-                );
-                $checkStmt->execute([$spotId]);
-                if (!$checkStmt->fetch()) {
-                    $errors[] = "Выбранное место не существует";
+                if ($form["select_tariff"] === "create_tariff") {
+                    $stmt = $pdo->prepare("INSERT INTO tariffs (tariff_name, price_per_hour, min_price, description, is_active) VALUES (:name, :price, :min, :desc, 1)");
+                    $stmt->execute([":name" => $form["name_tariff"], ":price" => $form["price_tariff"], ":min" => $form["min_price"], ":desc" => $form["description"]]);
+                    $tariffId = $pdo->lastInsertId();
                 } else {
-                    $pdo->prepare(
-                        "UPDATE parking_spots SET is_occupied = 0 WHERE id = (SELECT parking_spot_id FROM parking WHERE id = :pid)",
-                    )->execute([":pid" => $parking_id]);
-                    $pdo->prepare(
-                        "UPDATE parking_spots SET is_occupied = 1 WHERE id = :sid",
-                    )->execute([":sid" => $spotId]);
+                    $tariffId = $form["select_tariff"];
                 }
-            } else {
-                $errors[] = "Пожалуйста, выберите место или добавьте новое";
+
+                if ($form["spot"] === "create_spot") {
+                    $stmt = $pdo->prepare("INSERT INTO parking_spots (spot_number, spot_type, is_occupied) VALUES (:num, :type, 1)");
+                    $stmt->execute([":num" => $form["spot_number"], ":type" => $form["type_spot"]]);
+                    $spotId = $pdo->lastInsertId();
+                } elseif ($form["spot"] !== "default") {
+                    $spotId = (int) $form["spot"];
+                    $stmt = $pdo->prepare("SELECT id FROM parking_spots WHERE id = :id");
+                    $stmt->execute([":id" => $spotId]);
+                    if (!$stmt->fetch()) {
+                        $errors[] = "Выбранное место не существует";
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE parking_spots SET is_occupied = 0 WHERE id = (SELECT parking_spot_id FROM parking WHERE id = :pid)");
+                        $stmt->execute([":pid" => $parking_id]);
+                        $stmt = $pdo->prepare("UPDATE parking_spots SET is_occupied = 1 WHERE id = :sid");
+                        $stmt->execute([":sid" => $spotId]);
+                    }
+                } else {
+                    $errors[] = "Пожалуйста, выберите место или добавьте новое";
+                }
+
+                if (empty($errors)) {
+                    $stmt = $pdo->prepare("UPDATE parking SET entry_time = :entry, exit_time = :exit, tariffs_id = :tid, parking_spot_id = :sid WHERE id = :pid");
+                    $stmt->execute([":entry" => $form["entry_time"], ":exit" => $form["exit_time"], ":tid" => $tariffId, ":sid" => $spotId, ":pid" => $parking_id]);
+
+                    if (!empty($form["amount"]) && (float) $form["amount"] > 0) {
+                        $stmt = $pdo->prepare("UPDATE payments SET amount = :amt, payment_status = :status, transaction_id = :tid WHERE parking_id = :pid");
+                        $stmt->execute([":amt" => (float) $form["amount"], ":status" => $form["payment_status"], ":tid" => $form["transaction_id"], ":pid" => $parking_id]);
+
+                        $isPaid = $form["payment_status"] === "completed" ? 1 : 0;
+                        $totalPrice = $isPaid ? (float) $form["amount"] : 0;
+                        $stmt = $pdo->prepare("UPDATE parking SET is_paid = :paid, total_price = :price WHERE id = :pid");
+                        $stmt->execute([":paid" => $isPaid, ":price" => $totalPrice, ":pid" => $parking_id]);
+                    }
+                }
+
+                $pdo->commit();
+                $success = true;
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                $errors[] = "Ошибка базы данных: " . $e->getMessage();
             }
-
-            $stmtParking = $pdo->prepare("
-                UPDATE parking
-                SET entry_time = :entry, exit_time = :exit, tariffs_id = :tid, parking_spot_id = :sid
-                WHERE id = :pid
-            ");
-            $stmtParking->execute([
-                ":entry" => $form["entry_time"],
-                ":exit" => $form["exit_time"],
-                ":tid" => $tariffId,
-                ":sid" => $spotId,
-                ":pid" => $parking_id,
-            ]);
-
-            $pdo->commit();
-            $success = true;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $errors[] = "Ошибка базы данных" . $e->getMessage();
         }
     }
     ?>
@@ -217,63 +174,57 @@ error_reporting(E_ALL);
                 <h3>Данные паркующегося</h3>
                 <div>
                     <div class="input-fio">
-                        <label for="fio">Фио паркующегося</label>
+                        <label for="fio">ФИО паркующегося</label>
                         <input type="text" id="fio" name="fio" placeholder="Петров Петр Петрович"
-                               value="<?= htmlspecialchars(
-                                   $users["full_name"],
-                               ) ?>">
+                               value="<?= htmlspecialchars($users["full_name"] ?? '') ?>">
                     </div>
                     <div class="input-phone">
-                        <label for="phone">Номер паркующегося</label>
+                        <label for="phone">Номер телефона</label>
                         <input type="tel" autocomplete="tel" id="phone" name="phone" placeholder="+7999999999"
-                               value="<?= htmlspecialchars($users["phone"]) ?>">
+                               value="<?= htmlspecialchars($users["phone"] ?? '') ?>">
                     </div>
                 </div>
             </div>
             <div class="cars-data">
                 <h3>Данные о машине</h3>
-                <div class ="input-car-model">
+                <div class="input-car-model">
                     <label for="car_model">Модель машины</label>
                     <input type="text" id="car_model" name="car_model" placeholder="Ford"
-                    value ="<?= htmlspecialchars($users["car_model"]) ?>">
+                           value="<?= htmlspecialchars($users["car_model"] ?? '') ?>">
                 </div>
                 <div class="input-car-color">
                     <label for="car_color">Цвет машины</label>
                     <input type="text" id="car_color" name="car_color" placeholder="Серый"
-                    value ="<?= htmlspecialchars($users["car_color"]) ?>">
+                           value="<?= htmlspecialchars($users["car_color"] ?? '') ?>">
                 </div>
                 <div class="input-car-appearence">
                     <label for="car_appearance">Повреждения на машине</label>
-                    <input type="text" id="car_appearance" name="car_appearance" placeholder="царапина слева на кузове с переди"
-                    value ="<?= htmlspecialchars($users["car_appearance"]) ?>">
+                    <input type="text" id="car_appearance" name="car_appearance" placeholder="царапина слева на кузове"
+                           value="<?= htmlspecialchars($users["car_appearance"] ?? '') ?>">
                 </div>
             </div>
-            <div class = "date-data">
+            <div class="date-data">
                 <h3>Дата парковки</h3>
-                <div class="">
-                    <label for="entry_time">Время вьезда</label>
-                <input type="datetime-local" id="entry_time" name="entry_time"
-                    value ="<?= htmlspecialchars($users["entry_time"]) ?>">
+                <div>
+                    <label for="entry_time">Время въезда</label>
+                    <input type="datetime-local" id="entry_time" name="entry_time"
+                           value="<?= htmlspecialchars($users["entry_time"] ?? '') ?>">
                 </div>
                 <div>
-                <label for="exit_time">Время выезда</label>
-                <input type="datetime-local" id="exit_time" name="exit_time"
-                value="<?= htmlspecialchars($users["exit_time"]) ?>">
+                    <label for="exit_time">Время выезда</label>
+                    <input type="datetime-local" id="exit_time" name="exit_time"
+                           value="<?= htmlspecialchars($users["exit_time"] ?? '') ?>">
                 </div>
             </div>
             <div class="tariff">
-                <label for="select_tariff">Выберите тариф стаянки</label>
+                <label for="select_tariff">Выберите тариф стоянки</label>
                 <div class="select-wrapper">
                     <select id="select_tariff" name="select_tariff">
                         <option value="default">Выберите тариф</option>
                         <option value="create_tariff">Добавить свой тариф</option>
                         <?php foreach ($tariffs as $tariff): ?>
-                            <option value="<?= htmlspecialchars(
-                                $tariff["tariff_id"],
-                            ) ?>">
-                                <?= htmlspecialchars(
-                                    $tariff["tariff_description"],
-                                ) ?></option>
+                            <option value="<?= htmlspecialchars($tariff["tariff_id"]) ?>">
+                                <?= htmlspecialchars($tariff["tariff_description"]) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -303,12 +254,8 @@ error_reporting(E_ALL);
                         <option value="default">Выберите место стоянки</option>
                         <option value="create_spot">Добавить новое место стоянки</option>
                         <?php foreach ($spots as $spot): ?>
-                            <option value="<?= htmlspecialchars(
-                                $spot["parking_id"],
-                            ) ?>">
-                                <?= htmlspecialchars(
-                                    $spot["spot_number"],
-                                ) ?></option>
+                            <option value="<?= htmlspecialchars($spot["parking_id"]) ?>">
+                                <?= htmlspecialchars($spot["spot_number"]) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -329,33 +276,38 @@ error_reporting(E_ALL);
             </div>
             <div class="payment">
                 <div class="amount">
-                    <label for="amount">К оплате(руб)</label>
-                    <input type="text" id="amount" name="amount" placeholder="300руб" value="<?=htmlspecialchars($payments['amount'])?>">
+                    <label for="amount">К оплате (руб)</label>
+                    <input type="text" id="amount" name="amount" placeholder="300"
+                           value="<?= htmlspecialchars($payments['amount']) ?>">
                 </div>
                 <div class="payment-status">
                     <label for="payment_status">Статус оплаты</label>
                     <div class="select-wrapper">
                         <select id="payment_status" name="payment_status">
-                            <option value="pending" selected>В ожидании</option>
-                            <option value="completed">Успешно</option>
-                            <option value="failed">Провально</option>
+                            <option value="pending" <?= ($payments['payment_status'] ?? '') === 'pending' ? 'selected' : '' ?>>В ожидании</option>
+                            <option value="completed" <?= ($payments['payment_status'] ?? '') === 'completed' ? 'selected' : '' ?>>Успешно</option>
+                            <option value="failed" <?= ($payments['payment_status'] ?? '') === 'failed' ? 'selected' : '' ?>>Провалено</option>
                         </select>
                     </div>
                 </div>
                 <div class="transaction-id">
                     <label for="transaction_id">ID Транзакции</label>
-                    <input type="text" id="transaction_id" name="transaction_id" placeholder="TXN80121" value="<?= htmlspecialchars($payments['transaction_id'])?>">
+                    <input type="text" id="transaction_id" name="transaction_id" placeholder="TXN80121"
+                           value="<?= htmlspecialchars($payments['transaction_id'] ?? '') ?>">
                 </div>
             </div>
             <div class="error-form">
                 <?php if (!empty($errors)): ?>
                     <ul class="error-list">
                         <?php foreach ($errors as $error): ?>
-                            <li><?php echo $error; ?></li>
+                            <li><?= htmlspecialchars($error) ?></li>
                         <?php endforeach; ?>
                     </ul>
                 <?php endif; ?>
             </div>
+            <?php if ($success): ?>
+                <div class="success-message">Запись успешно обновлена.</div>
+            <?php endif; ?>
             <div class="wrapper-btn">
                 <input class="btn-submit" type="submit" value="Отправить">
             </div>
